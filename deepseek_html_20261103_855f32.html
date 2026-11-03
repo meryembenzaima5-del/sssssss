@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ma Localisation IP & Sécurité</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-1: #0f0c29; --bg-3: #24243e;
+            --accent: #6ee7ff; --accent-2: #a78bfa;
+            --card: rgba(255, 255, 255, 0.06);
+            --card-border: rgba(255, 255, 255, 0.12);
+            --text: #f1f5f9; --text-muted: #94a3b8;
+            --safe: #34d399; --warn: #fbbf24; --danger: #f87171;
+        }
+        html, body { height: 100%; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at 20% 20%, #302b63 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, #6ee7ff20 0%, transparent 50%),
+                        linear-gradient(135deg, var(--bg-1), var(--bg-3));
+            color: var(--text); min-height: 100vh; display: flex; align-items: center;
+            justify-content: center; padding: 24px; -webkit-font-smoothing: antialiased;
+            position: relative; overflow-x: hidden;
+        }
+        body::before {
+            content: ""; position: fixed; inset: 0;
+            background-image: linear-gradient(rgba(110,231,255,.04) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(110,231,255,.04) 1px, transparent 1px);
+            background-size: 48px 48px; pointer-events: none; z-index: 0;
+            mask-image: radial-gradient(circle at center, black 40%, transparent 80%);
+        }
+        .container { position: relative; z-index: 1; width: 100%; max-width: 680px; display: flex; flex-direction: column; gap: 20px; }
+        .header { text-align: center; margin-bottom: 4px; }
+        .badge {
+            display: inline-flex; align-items: center; gap: 8px; font-size: .75rem; font-weight: 600;
+            letter-spacing: .1em; text-transform: uppercase; color: var(--accent);
+            background: rgba(110,231,255,.08); border: 1px solid rgba(110,231,255,.25);
+            padding: 6px 14px; border-radius: 100px; margin-bottom: 14px;
+        }
+        .badge::before {
+            content: ""; width: 6px; height: 6px; border-radius: 50%;
+            background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+        h1 {
+            font-size: clamp(1.5rem, 4vw, 2rem); font-weight: 800; letter-spacing: -.02em; line-height: 1.2;
+            background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .subtitle { color: var(--text-muted); font-size: .9rem; margin-top: 8px; }
+        .card {
+            background: var(--card); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border); border-radius: 24px; padding: 32px;
+            box-shadow: 0 20px 60px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.08);
+            position: relative; overflow: hidden;
+        }
+        .card::before {
+            content: ""; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent); opacity: .6;
+        }
+        .ip-block { text-align: center; padding: 8px 0 24px; border-bottom: 1px solid var(--card-border); margin-bottom: 24px; }
+        .ip-label { font-size: .75rem; font-weight: 600; letter-spacing: .15em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; }
+        .ip-value {
+            font-family: 'JetBrains Mono', 'Courier New', monospace; font-size: clamp(1.4rem, 4.5vw, 2rem);
+            font-weight: 700; color: var(--accent); word-break: break-all; letter-spacing: -.02em;
+        }
+        .ip-value.loading { color: var(--text-muted); font-style: italic; font-size: 1rem; animation: blink 1.2s infinite; }
+        .ip-value.error { color: var(--danger); }
+        @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+        .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        @media (max-width: 520px) { .info-grid { grid-template-columns: 1fr; } .card { padding: 24px 20px; } }
+        .info-item {
+            display: flex; align-items: center; gap: 12px; padding: 14px;
+            background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06);
+            border-radius: 14px; transition: all .2s ease;
+        }
+        .info-item:hover { background: rgba(110,231,255,.06); border-color: rgba(110,231,255,.2); transform: translateY(-2px); }
+        .info-icon {
+            font-size: 1.2rem; flex-shrink: 0; width: 36px; height: 36px;
+            display: grid; place-items: center; background: rgba(110,231,255,.1); border-radius: 10px;
+        }
+        .info-text { min-width: 0; flex: 1; }
+        .info-text .label { font-size: .7rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-muted); display: block; margin-bottom: 2px; }
+        .info-text .value { font-size: .95rem; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .info-item.full { grid-column: 1 / -1; }
+        .info-item.full .value { font-family: 'JetBrains Mono', 'Courier New', monospace; white-space: normal; }
+        .security-item { border-left: 3px solid var(--safe); }
+        .security-item.risk-warn { border-left-color: var(--warn); }
+        .security-item.risk-danger { border-left-color: var(--danger); }
+        .security-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+        .sec-badge {
+            display: inline-flex; align-items: center; gap: 4px; font-size: .75rem; font-weight: 600;
+            padding: 4px 10px; border-radius: 100px; background: rgba(52,211,153,.12); color: var(--safe);
+            border: 1px solid rgba(52,211,153,.3);
+        }
+        .sec-badge.off { background: rgba(148,163,184,.08); color: var(--text-muted); border-color: rgba(148,163,184,.2); }
+        .sec-badge.on { background: rgba(248,113,113,.12); color: var(--danger); border-color: rgba(248,113,113,.3); }
+        .sec-badge.warn { background: rgba(251,191,36,.12); color: var(--warn); border-color: rgba(251,191,36,.3); }
+        #map { margin-top: 24px; border-radius: 16px; overflow: hidden; border: 1px solid var(--card-border); min-height: 260px; background: rgba(0,0,0,.2); position: relative; }
+        #map iframe { display: block; width: 100%; height: 260px; border: 0; filter: saturate(.9) brightness(.95); }
+        #map.empty::after {
+            content: "🗺️ En attente des coordonnées..."; position: absolute; inset: 0;
+            display: grid; place-items: center; color: var(--text-muted); font-size: .9rem;
+        }
+        .btn {
+            margin-top: 24px; width: 100%; padding: 14px 24px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #0f0c29;
+            border: none; border-radius: 14px; font-family: inherit; font-size: .95rem; font-weight: 700;
+            letter-spacing: .02em; cursor: pointer; transition: all .2s ease;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            box-shadow: 0 8px 24px rgba(110,231,255,.25);
+        }
+        .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(110,231,255,.4); }
+        .btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+        .btn .spinner {
+            width: 16px; height: 16px; border: 2px solid rgba(15,12,41,.3);
+            border-top-color: #0f0c29; border-radius: 50%; animation: spin .8s linear infinite; display: none;
+        }
+        .btn.loading .spinner { display: block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .footer { text-align: center; font-size: .75rem; color: var(--text-muted); margin-top: 4px; }
+        .footer a { color: var(--accent); text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="badge">Live</div>
+            <h1>Votre IP, Localisation & Sécurité</h1>
+            <p class="subtitle">Détection automatique — VPN, Proxy, Tor, Hébergement</p>
+        </div>
+
+        <div class="card">
+            <div class="ip-block">
+                <div class="ip-label">Adresse IP publique</div>
+                <div id="ip" class="ip-value loading">Détection en cours…</div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-item"><div class="info-icon">📍</div><div class="info-text"><span class="label">Ville</span><span class="value" id="city">—</span></div></div>
+                <div class="info-item"><div class="info-icon">🗺️</div><div class="info-text"><span class="label">Région</span><span class="value" id="region">—</span></div></div>
+                <div class="info-item"><div class="info-icon">🏳️</div><div class="info-text"><span class="label">Pays</span><span class="value" id="country">—</span></div></div>
+                <div class="info-item"><div class="info-icon">📮</div><div class="info-text"><span class="label">Code postal</span><span class="value" id="postal">—</span></div></div>
+                <div class="info-item"><div class="info-icon">🕒</div><div class="info-text"><span class="label">Fuseau horaire</span><span class="value" id="timezone">—</span></div></div>
+                <div class="info-item"><div class="info-icon">📡</div><div class="info-text"><span class="label">FAI</span><span class="value" id="isp">—</span></div></div>
+                <div class="info-item full"><div class="info-icon">🧭</div><div class="info-text"><span class="label">Coordonnées (latitude, longitude)</span><span class="value" id="coords">—</span></div></div>
+                <div class="info-item full security-item" id="securityItem">
+                    <div class="info-icon">🛡️</div>
+                    <div class="info-text">
+                        <span class="label">Détection d'anonymisation</span>
+                        <div class="security-badges" id="securityBadges">
+                            <span class="sec-badge off">Analyse…</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="map" class="empty"></div>
+
+            <button id="refreshBtn" class="btn" onclick="fetchIP()">
+                <span class="spinner"></span>
+                <span class="btn-text">Actualiser</span>
+            </button>
+        </div>
+
+        <div class="footer">
+            Données via <a href="https://ipwho.is" target="_blank" rel="noopener">ipwho.is</a> · Carte par OpenStreetMap
+        </div>
+    </div>
+
+    <script>
+        async function fetchIP() {
+            const ipEl = document.getElementById('ip');
+            const btn = document.getElementById('refreshBtn');
+            const mapEl = document.getElementById('map');
+            const btnText = btn.querySelector('.btn-text');
+            const secItem = document.getElementById('securityItem');
+            const secBadges = document.getElementById('securityBadges');
+
+            // Reset UI
+            ipEl.textContent = 'Détection en cours…';
+            ipEl.className = 'ip-value loading';
+            btn.disabled = true;
+            btn.classList.add('loading');
+            btnText.textContent = 'Chargement…';
+            mapEl.className = 'empty';
+            mapEl.innerHTML = '';
+            ['city','region','country','postal','timezone','isp','coords'].forEach(id => {
+                document.getElementById(id).textContent = '—';
+            });
+            secBadges.innerHTML = '<span class="sec-badge off">Analyse…</span>';
+            secItem.className = 'info-item full security-item';
+
+            try {
+                // ✅ ipwho.is : géoloc + sécurité en un seul appel, HTTPS, CORS, sans clé
+                const res = await fetch('https://ipwho.is/');
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const d = await res.json();
+
+                if (!d.success) {
+                    throw new Error(d.message || 'Réponse invalide');
+                }
+
+                // --- IP et géolocalisation ---
+                ipEl.textContent = d.ip || 'Inconnue';
+                ipEl.className = 'ip-value';
+
+                document.getElementById('city').textContent     = d.city || 'N/A';
+                document.getElementById('region').textContent   = d.region || 'N/A';
+                document.getElementById('country').textContent  = d.country || 'N/A';
+                document.getElementById('postal').textContent   = d.postal || 'N/A';
+                document.getElementById('timezone').textContent = d.timezone?.id || 'N/A';
+                document.getElementById('isp').textContent      = d.connection?.isp || d.connection?.org || 'N/A';
+
+                // Coordonnées
+                if (d.latitude != null && d.longitude != null) {
+                    document.getElementById('coords').textContent = `${d.latitude.toFixed(4)}, ${d.longitude.toFixed(4)}`;
+
+                    // Carte
+                    const delta = 0.05;
+                    const bbox = `${d.longitude - delta},${d.latitude - delta},${d.longitude + delta},${d.latitude + delta}`;
+                    mapEl.className = '';
+                    mapEl.innerHTML = `<iframe src="https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${d.latitude},${d.longitude}" loading="lazy" title="Carte de localisation"></iframe>`;
+                } else {
+                    document.getElementById('coords').textContent = 'Non disponibles';
+                }
+
+                // --- Détection sécurité (ipwho.is) ---
+                const sec = d.security || {};
+                const isVpn   = sec.vpn === true;
+                const isProxy = sec.proxy === true;
+                const isTor   = sec.tor === true;
+                const isHost  = sec.hosting === true;
+
+                const anyRisk = isVpn || isProxy || isTor || isHost;
+                if (anyRisk) {
+                    secItem.classList.add(isTor ? 'risk-danger' : 'risk-warn');
+                }
+
+                const badges = [];
+                badges.push(`<span class="sec-badge ${isVpn ? 'on' : 'off'}">${isVpn ? '🛑' : '✅'} VPN ${isVpn ? 'détecté' : 'non'}</span>`);
+                badges.push(`<span class="sec-badge ${isProxy ? 'on' : 'off'}">${isProxy ? '🛑' : '✅'} Proxy ${isProxy ? 'détecté' : 'non'}</span>`);
+                badges.push(`<span class="sec-badge ${isTor ? 'on' : 'off'}">${isTor ? '🛑' : '✅'} Tor ${isTor ? 'détecté' : 'non'}</span>`);
+                badges.push(`<span class="sec-badge ${isHost ? 'warn' : 'off'}">${isHost ? '⚠️' : '🏠'} Hébergement ${isHost ? 'oui' : 'non'}</span>`);
+                secBadges.innerHTML = badges.join('');
+
+            } catch (err) {
+                console.error('Erreur ipwho.is :', err);
+
+                // ✅ Tentative de secours avec freeipapi (uniquement pour la géoloc, pas de sécurité)
+                try {
+                    const res2 = await fetch('https://free.freeipapi.com/api/v1/json/');
+                    if (!res2.ok) throw new Error('HTTP ' + res2.status);
+                    const d2 = await res2.json();
+
+                    ipEl.textContent = d2.ipAddress || 'Inconnue';
+                    ipEl.className = 'ip-value';
+                    document.getElementById('city').textContent     = d2.cityName || 'N/A';
+                    document.getElementById('region').textContent   = d2.regionName || 'N/A';
+                    document.getElementById('country').textContent  = d2.countryName || 'N/A';
+                    document.getElementById('postal').textContent   = d2.zipCode || 'N/A';
+                    document.getElementById('timezone').textContent = d2.timeZones?.[0] || 'N/A';
+                    document.getElementById('isp').textContent      = d2.asnOrganization || 'N/A';
+
+                    if (d2.latitude != null && d2.longitude != null) {
+                        document.getElementById('coords').textContent = `${d2.latitude.toFixed(4)}, ${d2.longitude.toFixed(4)}`;
+                        const delta = 0.05;
+                        const bbox = `${d2.longitude - delta},${d2.latitude - delta},${d2.longitude + delta},${d2.latitude + delta}`;
+                        mapEl.className = '';
+                        mapEl.innerHTML = `<iframe src="https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${d2.latitude},${d2.longitude}" loading="lazy" title="Carte de localisation"></iframe>`;
+                    }
+
+                    secBadges.innerHTML = '<span class="sec-badge warn">⚠️ Détection indisponible (source de secours)</span>';
+                    secItem.classList.add('risk-warn');
+
+                } catch (err2) {
+                    console.error('Erreur freeipapi :', err2);
+                    ipEl.textContent = 'Erreur de chargement';
+                    ipEl.className = 'ip-value error';
+                    secBadges.innerHTML = '<span class="sec-badge on">❌ Impossible de récupérer les données</span>';
+                }
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('loading');
+                btnText.textContent = 'Actualiser';
+            }
+        }
+
+        fetchIP();
+    </script>
+</body>
+</html>
